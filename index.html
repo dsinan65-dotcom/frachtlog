@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101c2c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>FrachtLog</title>
+<style>
+:root{--navy:#101c2c;--amber:#f0a830;--amber2:#d68f1f;--bg:#eef1f5;--card:#fff;--text:#101c2c;--sub:#5a6b80;--line:#dde3ea}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--navy);color:#fff;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:19px}
+#net{font-size:12px;padding:4px 9px;border-radius:12px;background:#1f7a3d}
+#net.off{background:#b3541e}
+main{max-width:640px;margin:0 auto;padding:14px 14px calc(40px + env(safe-area-inset-bottom,0px))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--sub)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f{margin-bottom:10px}
+.f label{display:block;font-size:12.5px;color:var(--sub);margin-bottom:4px;font-weight:600}
+.f input{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:8px;font-size:16px;background:var(--bg);color:var(--text)}
+.f input:focus{outline:none;border-color:var(--amber)}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;padding:12px 0;background:var(--bg);border:0;color:var(--text);font-size:15px;font-weight:700}
+.seg button.on{background:var(--amber);color:#241300}
+.btn{width:100%;padding:15px;background:var(--amber);color:#241300;border:0;border-radius:9px;font-size:17px;font-weight:800}
+.btn:active{background:var(--amber2)}
+.e{border-bottom:1px solid var(--line);padding:9px 0;font-size:14px}
+.e:last-child{border:0}
+.e .t{display:flex;justify-content:space-between;font-weight:700}
+.e .m{color:var(--sub);font-size:13px;margin-top:2px}
+.empty{color:var(--sub);text-align:center;padding:14px 0;font-size:14px}
+#warn{display:none;background:#fff3cd;border:1px solid #f0c95c;color:#5c4400;padding:10px;border-radius:9px;margin-bottom:12px;font-size:13px}
+#toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header><h1>🚛 FrachtLog</h1><span id="net">online</span></header>
+<main>
+<div id="warn">Backend nicht verbunden: In der Datei index.html die Variable SCRIPT_URL eintragen.</div>
+
+<div class="card"><h2>Fahrt</h2>
+ <div class="row">
+  <div class="f"><label>Fahrzeug</label><input id="fz" placeholder="HH OL 1122" autocapitalize="characters"></div>
+  <div class="f"><label>Fahrer</label><input id="fa" placeholder="Name"></div>
+ </div>
+ <div class="row">
+  <div class="f"><label>Datum</label><input id="dt" type="date"></div>
+  <div class="f"><label>Tag</label><input id="tg" readonly></div>
+ </div>
+ <div class="f"><label>Auftraggeber</label><input id="ag" placeholder="z. B. LTH"></div>
+</div>
+
+<div class="card"><h2>Fahrstrecke &amp; Container</h2>
+ <div class="row">
+  <div class="f"><label>Von</label><input id="von"></div>
+  <div class="f"><label>Nach</label><input id="nach"></div>
+ </div>
+ <div class="f"><label>Container-Nr.</label><input id="cn" placeholder="CMAU 0307007" autocapitalize="characters"></div>
+ <div class="row">
+  <div class="f"><label>20 / 40</label><div class="seg" id="sSize"><button data-v="20" class="on">20</button><button data-v="40">40</button></div></div>
+  <div class="f"><label>DC / HC</label><div class="seg" id="sTyp"><button data-v="DC" class="on">DC</button><button data-v="HC">HC</button></div></div>
+ </div>
+ <div class="f"><label>L / V</label><div class="seg" id="sLV"><button data-v="L" class="on">L (Leer)</button><button data-v="V">V (Voll)</button></div></div>
+ <div class="row">
+  <div class="f"><label>Chassis</label><input id="ch" autocapitalize="characters"></div>
+  <div class="f"><label>Auftragsnummer</label><input id="an" inputmode="numeric"></div>
+ </div>
+ <div class="row">
+  <div class="f"><label>Uhrzeit Start</label><input id="ts" type="time"></div>
+  <div class="f"><label>Uhrzeit Ende</label><input id="te" type="time"></div>
+ </div>
+ <div class="f"><label>Bemerkungen / Wartezeiten</label><input id="bm"></div>
+ <button class="btn" id="save">Eintrag speichern</button>
+</div>
+
+<div class="card"><h2>Meine Einträge heute</h2><div id="list"><div class="empty">Noch keine Einträge</div></div></div>
+</main>
+<div id="toast"></div>
+
+<script>
+/* ====== HIER ANPASSEN ====== */
+const SCRIPT_URL="https://script.google.com/macros/s/AKfycbzMG9JPFBloIgxztNiEqlOlxf6FeC32QU252K3HlkBMzixYMh1j_4Fg-jK6t2E7y7xx7Q/exec";
+const SECRET="frachtlog2026"; /* muss identisch mit SECRET im Apps-Script sein */
+/* =========================== */
+const $=id=>document.getElementById(id);
+const TAGE=["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const V={size:"20",typ:"DC",lv:"L"};
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)}
+function esc(s){return String(s==null?"":s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]))}
+function setTag(){const v=$("dt").value;$("tg").value=v?TAGE[new Date(v+"T12:00:00").getDay()]:""}
+if(SCRIPT_URL.indexOf("HIER_")===0)$("warn").style.display="block";
+$("dt").value=today();setTag();$("dt").addEventListener("input",setTag);
+["fz","fa","ag"].forEach(id=>{$(id).value=ls.get("fl_"+id,"")});
+function seg(id,key){$(id).addEventListener("click",e=>{if(e.target.tagName!=="BUTTON")return;
+ $(id).querySelectorAll("button").forEach(b=>b.classList.remove("on"));e.target.classList.add("on");V[key]=e.target.dataset.v})}
+seg("sSize","size");seg("sTyp","typ");seg("sLV","lv");
+function resetSeg(id,v){$(id).querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
+
+$("save").addEventListener("click",()=>{
+ const fz=$("fz").value.trim(),fa=$("fa").value.trim();
+ if(!fz||!fa){toast("Fahrzeug und Fahrer eingeben");return}
+ ["fz","fa","ag"].forEach(id=>ls.set("fl_"+id,$(id).value.trim()));
+ const e={id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),datum:$("dt").value||today(),tag:$("tg").value,
+  fahrzeug:fz,fahrer:fa,auftraggeber:$("ag").value.trim(),von:$("von").value.trim(),nach:$("nach").value.trim(),
+  container:$("cn").value.trim().toUpperCase(),groesse:V.size,typ:V.typ,lv:V.lv,chassis:$("ch").value.trim().toUpperCase(),
+  auftragsnummer:$("an").value.trim(),start:$("ts").value,ende:$("te").value,bemerkung:$("bm").value.trim(),sent:false};
+ ls.set("fl_h",[e].concat(ls.get("fl_h",[])).slice(0,200));
+ ls.set("fl_q",ls.get("fl_q",[]).concat([e]));
+ ["von","nach","cn","ch","an","ts","te","bm"].forEach(id=>$(id).value="");
+ V.size="20";V.typ="DC";V.lv="L";resetSeg("sSize","20");resetSeg("sTyp","DC");resetSeg("sLV","L");
+ render();toast("Gespeichert");flush();
+});
+
+let busy=false;
+async function flush(){
+ if(busy||SCRIPT_URL.indexOf("HIER_")===0)return;
+ let q=ls.get("fl_q",[]);if(!q.length)return;
+ busy=true;const rest=[];
+ for(const e of q){
+  try{
+   const r=await fetch(SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(Object.assign({},e,{secret:SECRET}))});
+   const j=await r.json();
+   if(j.status==="ok"||j.status==="dup"){const h=ls.get("fl_h",[]);h.forEach(x=>{if(x.id===e.id)x.sent=true});ls.set("fl_h",h)}
+   else rest.push(e);
+  }catch(x){rest.push(e)}
+ }
+ ls.set("fl_q",rest);busy=false;render();
+}
+function render(){
+ const h=ls.get("fl_h",[]).filter(e=>e.datum===today());
+ $("list").innerHTML=h.length?h.map(e=>`<div class="e"><div class="t"><span>${esc(e.von)||"—"} → ${esc(e.nach)||"—"}</span><span>${e.sent?"✓":"⏳"}</span></div>
+ <div class="m">${esc(e.container)||"—"} · ${esc(e.groesse)} ${esc(e.typ)} · ${esc(e.lv)}${e.auftragsnummer?" · #"+esc(e.auftragsnummer):""}${e.bemerkung?" · "+esc(e.bemerkung):""}</div></div>`).join(""):'<div class="empty">Noch keine Einträge</div>';
+}
+function net(){const n=$("net");n.textContent=navigator.onLine?"online":"offline";n.classList.toggle("off",!navigator.onLine)}
+window.addEventListener("online",()=>{net();flush()});window.addEventListener("offline",net);
+net();render();flush();setInterval(flush,30000);
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
